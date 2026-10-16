@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+deepface
+google-generativeai
+opencv-python-headless
+tf-keras
+numpy<2.0.0
+pillow
+python-multipart

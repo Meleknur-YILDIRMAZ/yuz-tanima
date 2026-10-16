@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSYKE — Yüz Psikoloji Sistemi</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Fraunces:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0f;
+    --surface: #0d1117;
+    --surface2: #131920;
+    --border: rgba(255,255,255,0.07);
+    --accent: #7fffb2;
+    --accent2: #ff6b9d;
+    --accent3: #64b5f6;
+    --text: #e8edf5;
+    --muted: #5a6a7a;
+    --glow: rgba(127,255,178,0.15);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(127,255,178,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(127,255,178,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2.4rem;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(127,255,178,0.4);
+  }
+
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .status-pill {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; }
+    50% { opacity:0.4; }
+  }
+
+  /* Main layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 440px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Camera panel */
+  .camera-panel {
+    position: sticky;
+    top: 24px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-indicator {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-left: auto;
+  }
+
+  .panel-indicator.green { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .panel-indicator.red { background: var(--accent2); }
+  .panel-indicator.blue { background: var(--accent3); }
+
+  /* Video */
+  .video-wrapper {
+    position: relative;
+    aspect-ratio: 4/3;
+    background: #000;
+    overflow: hidden;
+  }
+
+  #video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scaleX(-1); /* Mirror effect */
+  }
+
+  #canvas { display: none; }
+
+  /* Corner decorations */
+  .corner {
+    position: absolute;
+    width: 20px; height: 20px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.6;
+  }
+  .corner.tl { top:10px; left:10px; border-width:2px 0 0 2px; }
+  .corner.tr { top:10px; right:10px; border-width:2px 2px 0 0; }
+  .corner.bl { bottom:10px; left:10px; border-width:0 0 2px 2px; }
+  .corner.br { bottom:10px; right:10px; border-width:0 2px 2px 0; }
+
+  /* Scan line animation */
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    top: 0;
+  }
+
+  .scanning .scan-line {
+    animation: scan 2s ease-in-out infinite;
+    opacity: 0.6;
+  }
+
+  @keyframes scan {
+    0% { top: 0%; }
+    100% { top: 100%; }
+  }
+
+  .video-overlay-text {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+  }
+
+  /* Controls */
+  .controls {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 24px rgba(127,255,178,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Quick stats from DeepFace */
+  .quick-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0 16px 16px;
+  }
+
+  .stat-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 12px;
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-value.pink { color: var(--accent2); }
+  .stat-value.blue { color: var(--accent3); }
+
+  /* Results panel */
+  .results-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 60px 32px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  .empty-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    font-style: italic;
+    margin-bottom: 8px;
+    color: var(--text);
+    opacity: 0.5;
+  }
+
+  .empty-sub {
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+
+  /* Psychology card */
+  .psych-card {
+    padding: 24px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 0.5s ease;
+  }
+
+  .psych-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Score meters */
+  .scores-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .score-meter {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .score-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .score-num.mystery { color: var(--accent2); }
+  .score-num.empathy { color: var(--accent3); }
+  .score-num.energy { color: var(--accent); }
+
+  .score-name {
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Text sections */
+  .section-text {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text);
+    opacity: 0.9;
+    margin-bottom: 20px;
+  }
+
+  /* Stress bar */
+  .stress-bar-wrap {
+    margin-bottom: 20px;
+  }
+
+  .stress-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .stress-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .stress-level {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .stress-level.low { color: var(--accent); }
+  .stress-level.mid { color: #ffd166; }
+  .stress-level.high { color: var(--accent2); }
+
+  .stress-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .stress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0%;
+  }
+
+  .stress-fill.low { background: var(--accent); }
+  .stress-fill.mid { background: #ffd166; }
+  .stress-fill.high { background: var(--accent2); }
+
+  /* Personality traits */
+  .traits-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .trait-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text);
+    opacity: 0.85;
+  }
+
+  .trait-bullet {
+    color: var(--accent);
+    font-size: 0.65rem;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  /* Advice */
+  .advice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .advice-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-left: 2px solid var(--accent2);
+    background: rgba(255,107,157,0.05);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text);
+    opacity: 0.85;
+  }
+
+  /* Emotion breakdown */
+  .emotion-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .emotion-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 44px;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .emotion-name {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .emotion-bar-bg {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .emotion-bar-fill {
+    height: 100%;
+    background: var(--accent3);
+    border-radius: 2px;
+    transition: width 1s ease;
+    width: 0%;
+  }
+
+  .emotion-bar-fill.dominant {
+    background: var(--accent);
+  }
+
+  .emotion-pct {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  /* Social type badge */
+  .social-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(127,255,178,0.08);
+    border: 1px solid rgba(127,255,178,0.2);
+    border-radius: 2px;
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+  }
+
+  /* Loading state */
+  .loading-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(8,10,15,0.85);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+  }
+
+  .loading-overlay.active {
+    display: flex;
+  }
+
+  .loading-spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-text {
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Responsive */
+  @media (max-width: 860px) {
+    .main-grid {
+      grid-template-columns: 1fr;
+    }
+    .camera-panel {
+      position: static;
+    }
+  }
+
+  /* Error toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    background: rgba(255,107,157,0.15);
+    border: 1px solid var(--accent2);
+    border-radius: 3px;
+    font-size: 0.75rem;
+    color: var(--accent2);
+    letter-spacing: 0.05em;
+    z-index: 100;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+  }
+
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="header-inner">
+      <div>
+        <div class="logo">PSYKE</div>
+        <div class="logo-sub">Yüz Psikoloji Analiz Sistemi v1.0</div>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        DeepFace + Gemini API
+      </div>
+    </div>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- Left: Camera -->
+    <div class="camera-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-tag">Kamera Görüntüsü</span>
+          <div class="panel-indicator green" id="cam-indicator"></div>
+        </div>
+
+        <div class="video-wrapper" id="video-wrapper">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="canvas"></canvas>
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+          <div class="scan-line" id="scan-line"></div>
+          <div class="video-overlay-text" id="cam-status">KAMERA HAZIR</div>
+
+          <div class="loading-overlay" id="loading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Analiz ediliyor...</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-primary" id="analyzeBtn" onclick="captureAndAnalyze()">
+            ⬡ Yüzü Analiz Et
+          </button>
+          <button class="btn btn-ghost" onclick="startCamera()">
+            ↺ Kamerayı Yenile
+          </button>
+        </div>
+
+        <div class="quick-stats" id="quick-stats" style="display:none;">
+          <div class="stat-chip">
+            <div class="stat-label">Cinsiyet</div>
+            <div class="stat-value" id="qs-gender">—</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-label">Yaş</div>
+            <div class="stat-value blue" id="qs-age">—</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-label">Duygu</div>
+            <div class="stat-value pink" id="qs-emotion">—</div>
+          </div>
+          <div class="stat-chip">
+            <div class="stat-label">Güven</div>
+            <div class="stat-value" id="qs-conf">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Results -->
+    <div class="results-panel">
+      <div class="panel" id="results-container">
+
+        <!-- Empty state -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">◈</div>
+          <div class="empty-title">Henüz analiz yapılmadı</div>
+          <div class="empty-sub">Kameraya bakın ve<br>"Yüzü Analiz Et" butonuna tıklayın.<br><br>DeepFace yüzünüzü okuyacak,<br>Gemini psikolojinizi yorumlayacak.</div>
+        </div>
+
+        <!-- Results (hidden initially) -->
+        <div id="results" style="display:none;">
+
+          <!-- Scores -->
+          <div class="psych-card" id="card-scores">
+            <div class="card-title">Psikoloji Skorları</div>
+            <div class="scores-grid">
+              <div class="score-meter">
+                <div class="score-num mystery" id="r-mystery">—</div>
+                <div class="score-name">Gizem</div>
+              </div>
+              <div class="score-meter">
+                <div class="score-num empathy" id="r-empathy">—</div>
+                <div class="score-name">Empati</div>
+              </div>
+              <div class="score-meter">
+                <div class="score-num energy" id="r-energy">—</div>
+                <div class="score-name">Enerji</div>
+              </div>
+            </div>
+
+            <!-- Stress bar -->
+            <div class="stress-bar-wrap">
+              <div class="stress-bar-header">
+                <span class="stress-label">Stres Seviyesi</span>
+                <span class="stress-level" id="r-stress-level">—</span>
+              </div>
+              <div class="stress-bar">
+                <div class="stress-fill" id="r-stress-bar"></div>
+              </div>
+              <div style="font-size:0.72rem; color:var(--muted); margin-top:8px;" id="r-stress-desc"></div>
+            </div>
+
+            <!-- Social type -->
+            <div id="r-social-wrap">
+              <div class="card-title">Sosyal Eğilim</div>
+              <div class="social-badge" id="r-social">—</div>
+              <div style="font-size:0.8rem; color:var(--muted); line-height:1.6;" id="r-social-desc"></div>
+            </div>
+          </div>
+
+          <!-- General -->
+          <div class="psych-card" id="card-general">
+            <div class="card-title">Genel Durum</div>
+            <div class="section-text" id="r-general">—</div>
+
+            <div class="card-title">Yaş Psikolojisi</div>
+            <div class="section-text" id="r-age-psych">—</div>
+          </div>
+
+          <!-- Emotions -->
+          <div class="psych-card" id="card-emotions">
+            <div class="card-title">Duygu Analizi</div>
+            <div class="emotion-bars" id="r-emotions"></div>
+
+            <div class="card-title">Duygusal Yorum</div>
+            <div class="section-text" id="r-emotion-text">—</div>
+          </div>
+
+          <!-- Personality -->
+          <div class="psych-card" id="card-personality">
+            <div class="card-title">Kişilik İzlenimleri</div>
+            <div class="traits-list" id="r-traits"></div>
+          </div>
+
+          <!-- Advice -->
+          <div class="psych-card" id="card-advice">
+            <div class="card-title">Kişisel Tavsiyeler</div>
+            <div class="advice-list" id="r-advice"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const analyzeBtn = document.getElementById('analyzeBtn');
+
+const emotionLabels = {
+  happy: 'Mutlu', sad: 'Üzgün', angry: 'Kızgın',
+  fear: 'Korkmuş', surprise: 'Şaşkın', disgust: 'İğrenmiş', neutral: 'Nötr'
+};
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }
+    });
+    video.srcObject = stream;
+    document.getElementById('cam-status').textContent = 'KAMERA HAZIR';
+    document.getElementById('cam-indicator').classList.add('green');
+  } catch (e) {
+    showToast('Kamera erişimi reddedildi: ' + e.message);
+  }
+}
+
+function captureFrame() {
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  // Get base64 WITHOUT the data URI prefix
+  // Get base64 at MAXIMUM quality (1.0)
+  const dataURL = canvas.toDataURL('image/jpeg', 1.0);
+  return dataURL.split(',')[1];
+}
+
+async function captureAndAnalyze() {
+  if (!video.srcObject) {
+    showToast('Önce kamerayı başlatın.');
+    return;
+  }
+
+  // Show scanning animation
+  document.getElementById('video-wrapper').classList.add('scanning');
+  document.getElementById('loading').classList.add('active');
+  analyzeBtn.disabled = true;
+  document.getElementById('cam-status').textContent = 'TARANIYÖR...';
+
+  const imageB64 = captureFrame();
+
+  try {
+    const response = await fetch('/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_b64: imageB64 })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Analiz başarısız');
+    }
+
+    const data = await response.json();
+    renderResults(data);
+
+  } catch (e) {
+    showToast('Hata: ' + e.message);
+    console.error(e);
+  } finally {
+    document.getElementById('video-wrapper').classList.remove('scanning');
+    document.getElementById('loading').classList.remove('active');
+    analyzeBtn.disabled = false;
+    document.getElementById('cam-status').textContent = 'ANALİZ TAMAMLANDI';
+  }
+}
+
+function renderResults(data) {
+  const { face_data, psychology } = data;
+
+  // Quick stats
+  const genderTr = face_data.gender.includes('Man') || face_data.gender === 'man' ? 'Erkek' : 'Kadın';
+  document.getElementById('qs-gender').textContent = genderTr;
+  document.getElementById('qs-age').textContent = face_data.age;
+  document.getElementById('qs-emotion').textContent = emotionLabels[face_data.dominant_emotion] || face_data.dominant_emotion;
+  document.getElementById('qs-conf').textContent = '%' + Math.round(face_data.gender_confidence);
+  document.getElementById('quick-stats').style.display = 'grid';
+
+  // Hide empty, show results
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+
+  // Scores
+  document.getElementById('r-mystery').textContent = psychology.gizem_skoru;
+  document.getElementById('r-empathy').textContent = psychology.empati_skoru;
+  document.getElementById('r-energy').textContent = psychology.enerji_skoru;
+
+  // Stress
+  const stressScore = psychology.stres_seviyesi.skor;
+  const stressLevel = psychology.stres_seviyesi.seviye;
+  const stressClass = stressLevel === 'Düşük' ? 'low' : stressLevel === 'Orta' ? 'mid' : 'high';
+  const stressEl = document.getElementById('r-stress-level');
+  stressEl.textContent = stressLevel;
+  stressEl.className = 'stress-level ' + stressClass;
+  const fillEl = document.getElementById('r-stress-bar');
+  fillEl.className = 'stress-fill ' + stressClass;
+  setTimeout(() => { fillEl.style.width = stressScore + '%'; }, 100);
+  document.getElementById('r-stress-desc').textContent = psychology.stres_seviyesi.aciklama;
+
+  // Social
+  document.getElementById('r-social').textContent = '◈ ' + psychology.sosyal_egitim.tip;
+  document.getElementById('r-social-desc').textContent = psychology.sosyal_egitim.aciklama;
+
+  // General texts
+  document.getElementById('r-general').textContent = psychology.genel_durum;
+  document.getElementById('r-age-psych').textContent = psychology.yas_psikolojisi;
+
+  // Emotions
+  const emotionsDiv = document.getElementById('r-emotions');
+  emotionsDiv.innerHTML = '';
+  const dominant = face_data.dominant_emotion;
+  Object.entries(face_data.emotion_scores)
+    .sort((a,b) => b[1] - a[1])
+    .forEach(([key, val]) => {
+      const label = emotionLabels[key] || key;
+      const isDom = key === dominant;
+      emotionsDiv.innerHTML += `
+        <div class="emotion-row">
+          <div class="emotion-name">${label}</div>
+          <div class="emotion-bar-bg">
+            <div class="emotion-bar-fill ${isDom ? 'dominant' : ''}" data-val="${val}" style="width:0%"></div>
+          </div>
+          <div class="emotion-pct">%${Math.round(val)}</div>
+        </div>`;
+    });
+  setTimeout(() => {
+    document.querySelectorAll('.emotion-bar-fill').forEach(el => {
+      el.style.width = el.dataset.val + '%';
+    });
+  }, 100);
+  document.getElementById('r-emotion-text').textContent = psychology.duygusal_durum.yorum;
+
+  // Personality traits
+  const traitsDiv = document.getElementById('r-traits');
+  traitsDiv.innerHTML = '';
+  psychology.kisilik_izlenimleri.forEach(trait => {
+    traitsDiv.innerHTML += `
+      <div class="trait-item">
+        <span class="trait-bullet">▸</span>
+        <span>${trait}</span>
+      </div>`;
+  });
+
+  // Advice
+  const adviceDiv = document.getElementById('r-advice');
+  adviceDiv.innerHTML = '';
+  psychology.tavsiyeler.forEach(adv => {
+    adviceDiv.innerHTML += `
+      <div class="advice-item">
+        <span>${adv}</span>
+      </div>`;
+  });
+
+  // Animate cards in
+  const cards = document.querySelectorAll('.psych-card');
+  cards.forEach((card, i) => {
+    setTimeout(() => { card.classList.add('visible'); }, i * 120);
+  });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+// Auto-start camera
+startCamera();
+</script>
+
+</body>
+</html>
